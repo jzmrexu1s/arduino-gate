@@ -4,6 +4,7 @@
 #include <Adafruit_MLX90614.h>
 
 U8X8_SSD1306_128X64_ALT0_HW_I2C u8x8(/* reset=*/ U8X8_PIN_NONE);
+U8G2_SSD1306_128X64_ALT0_1_4W_HW_SPI u8g2(U8G2_R0, 13, 11, 10, 8);
 Adafruit_MLX90614 mlx = Adafruit_MLX90614();
 
 int pinButton = 6;
@@ -11,13 +12,14 @@ int pinRotary = A0;
 // int pinSensor = D4;
 int pinRed0 = 7;
 int pinRed1 = 8;
+int pinBuzzer = 5;
 
-int pinInterrupt = 2;
+int pinInterrupt = 0;
 
 int maxPeople = 100;
-float maxTemp = 36.8;
+float maxTemp = 39.0;
 
-int curPeople = 567;
+int curPeople = 0;
 
 int stateButton = 0;
 int stateModify = 0;
@@ -41,6 +43,7 @@ float mapfloat(float x, float in_min, float in_max, float out_min, float out_max
 void stateChange() {
     Serial.println(stateModify);
     stateModify = !stateModify;
+    // delay(50);
 }
 
 void setup() { 
@@ -54,7 +57,7 @@ void setup() {
 	u8x8.begin();
 	u8x8.setFlipMode(1);
     mlx.begin();
-    attachInterrupt(pinInterrupt, stateChange, CHANGE);
+    attachInterrupt(pinInterrupt, stateChange, FALLING);
 }
 void loop() {
 	/*stateButton = digitalRead(pinButton);
@@ -95,6 +98,9 @@ void loop() {
 
 
     float curTemp = mlx.readObjectTempC();
+    if (curPeople > maxPeople || curTemp > maxTemp) {
+        analogWrite(pinBuzzer, 1);
+    } else analogWrite(pinBuzzer, 0);
     // Serial.println(curTemp);
     // float curAmbTemp = mlx.readAmbientTempC();
     // Serial.println(curRed0);
@@ -141,4 +147,5 @@ void loop() {
     u8x8.print("   ");
 
     u8x8.refreshDisplay();
+    delay(50);
 }
