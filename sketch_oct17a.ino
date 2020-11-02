@@ -4,7 +4,6 @@
 #include <Adafruit_MLX90614.h>
 
 U8X8_SSD1306_128X64_ALT0_HW_I2C u8x8(/* reset=*/ U8X8_PIN_NONE);
-U8G2_SSD1306_128X64_ALT0_1_4W_HW_SPI u8g2(U8G2_R0, 13, 11, 10, 8);
 Adafruit_MLX90614 mlx = Adafruit_MLX90614();
 
 int pinButton = 6;
@@ -22,7 +21,8 @@ float maxTemp = 39.0;
 int curPeople = 0;
 
 int stateButton = 0;
-int stateModify = 0;
+bool stateModify = false;
+bool before = false;
 bool firstSet = false;
 
 bool state0 = false;
@@ -31,9 +31,15 @@ bool prevState0 = true;
 bool prevState1 = true;
 bool firstPassed = false;
 
+uint32_t t = 0;
+
 uint8_t *fontNormal = u8x8_font_chroma48medium8_r;
 uint8_t *fontBold = u8x8_font_victoriabold8_r;
 uint8_t *fontBig = u8x8_font_px437wyse700b_2x2_r;
+
+void interruptHandler() { 
+    t = millis();
+}
 
 float mapfloat(float x, float in_min, float in_max, float out_min, float out_max)
 {
@@ -41,9 +47,8 @@ float mapfloat(float x, float in_min, float in_max, float out_min, float out_max
 }
 
 void stateChange() {
-    Serial.println(stateModify);
+    before = stateModify;
     stateModify = !stateModify;
-    // delay(50);
 }
 
 void setup() { 
@@ -57,7 +62,7 @@ void setup() {
 	u8x8.begin();
 	u8x8.setFlipMode(1);
     mlx.begin();
-    attachInterrupt(pinInterrupt, stateChange, FALLING);
+    attachInterrupt(pinInterrupt, interruptHandler, FALLING);
 }
 void loop() {
 	/*stateButton = digitalRead(pinButton);
@@ -65,6 +70,12 @@ void loop() {
 		stateModify = !stateModify;
 		firstSet = true;
 	}*/
+
+    if ((digitalRead(pinButton) == HIGH) && (millis() - t > 300)) {
+        t = millis();
+        stateModify = !stateModify;
+    }
+
 	if (stateButton == LOW) firstSet = false;
 
 	if (!stateModify) maxPeople = map(analogRead(pinRotary), 0, 1023, 1000, 0);
@@ -73,27 +84,21 @@ void loop() {
     int curRed1 = digitalRead(pinRed1);
 
     if (state0 == false && curRed0 == LOW) {
-
         state0 = true;
-        Serial.println("On first");
     }
     if (state0 == true && curRed0 == HIGH) {
         firstPassed = !firstPassed;
         state0 = false;
-        Serial.println("Pass first");
     }
     if (state1 == false && curRed1 == LOW) {
         state1 = true;
-        Serial.println("On second");
     }
     if (state1 == true && curRed1 == HIGH && firstPassed == true) {
         curPeople += 1;
         firstPassed = false;
-        Serial.println("Add one");
     }
     if (state1 == true && curRed1 == HIGH) {
         state1 = false;
-        Serial.println("Leave second");
     }
 
 
@@ -147,5 +152,4 @@ void loop() {
     u8x8.print("   ");
 
     u8x8.refreshDisplay();
-    delay(50);
 }
