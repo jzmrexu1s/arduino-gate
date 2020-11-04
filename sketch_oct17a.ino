@@ -3,9 +3,11 @@
 #include <Wire.h>
 #include <Adafruit_MLX90614.h>
 
+// 类实例化
 U8X8_SSD1306_128X64_ALT0_HW_I2C u8x8(/* reset=*/ U8X8_PIN_NONE);
 Adafruit_MLX90614 mlx = Adafruit_MLX90614();
 
+// 引脚定义
 int pinButton = 6;
 int pinRotary = A0;
 // int pinSensor = D4;
@@ -15,6 +17,7 @@ int pinBuzzer = 5;
 
 int pinInterrupt = 0;
 
+// 变量定义
 int maxPeople = 100;
 float maxTemp = 39.0;
 
@@ -37,18 +40,15 @@ uint8_t *fontNormal = u8x8_font_chroma48medium8_r;
 uint8_t *fontBold = u8x8_font_victoriabold8_r;
 uint8_t *fontBig = u8x8_font_px437wyse700b_2x2_r;
 
+// 中断处理函数
 void interruptHandler() { 
     t = millis();
 }
 
+// 浮点map
 float mapfloat(float x, float in_min, float in_max, float out_min, float out_max)
 {
  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
-void stateChange() {
-    before = stateModify;
-    stateModify = !stateModify;
 }
 
 void setup() { 
@@ -65,21 +65,16 @@ void setup() {
     attachInterrupt(pinInterrupt, interruptHandler, FALLING);
 }
 void loop() {
-	/*stateButton = digitalRead(pinButton);
-	if (stateButton == HIGH && firstSet == false) {
-		stateModify = !stateModify;
-		firstSet = true;
-	}*/
-
+    // 检测是否切换修改
     if ((digitalRead(pinButton) == HIGH) && (millis() - t > 300)) {
         t = millis();
         stateModify = !stateModify;
     }
 
-	if (stateButton == LOW) firstSet = false;
-
+    // 获取人数上限
 	if (!stateModify) maxPeople = map(analogRead(pinRotary), 0, 1023, 1000, 0);
     
+    // 人体通过判断
     int curRed0 = digitalRead(pinRed0);
     int curRed1 = digitalRead(pinRed1);
 
@@ -101,8 +96,9 @@ void loop() {
         state1 = false;
     }
 
-
+    // 获取当前温度
     float curTemp = mlx.readObjectTempC();
+    // 报警
     if (curPeople > maxPeople || curTemp > maxTemp) {
         analogWrite(pinBuzzer, 1);
     } else analogWrite(pinBuzzer, 0);
@@ -110,6 +106,8 @@ void loop() {
     // float curAmbTemp = mlx.readAmbientTempC();
     // Serial.println(curRed0);
     // Serial.println(curRed1);
+
+    // 显示输出
     u8x8.setFont(fontNormal);
     u8x8.setCursor(0, 0);
     u8x8.print("PEOPLE");
@@ -121,7 +119,7 @@ void loop() {
     u8x8.print(maxPeople);
     u8x8.print("   ");
 
-    if (stateModify) maxTemp = mapfloat(analogRead(pinRotary), 0.0, 1023.0, 42.0, 32.0);
+    if (stateModify) maxTemp = mapfloat(analogRead(pinRotary), 0.0, 1023.0, 42.0, 32.0); // 获取温度上限
     u8x8.setFont(fontNormal);
     u8x8.setCursor(7, 0);
     u8x8.print("TEMP");
